@@ -4,9 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
 
-  // If deploying to a custom domain (yourdomain.com), keep base as '/'.
-  // If deploying to username.github.io/repo-name (no custom domain), change to '/repo-name/'.
-  base: '/',
+  // Set to '/repo-name/' when deploying to username.github.io/repo-name.
+  // Change back to '/' if you later point a custom domain at the site.
+  base: '/personal-website/',
 
   build: {
     chunkSizeWarningLimit: 700, // react-syntax-highlighter is ~630 kB min; it's isolated and cached
