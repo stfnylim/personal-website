@@ -1,0 +1,115 @@
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.container {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  user-select: none;
+  cursor: col-resize;
+}
+
+.imgBase {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.beforeClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.imgOverlay {
+  width: 100%;
+  height: auto;
+  /* Match exact dimensions of base image */
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 100%;
+  max-width: none;
+  /* Stretch to container's full width so clipping works correctly */
+  width: var(--container-width, 100%);
+}
+
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  z-index: 10;
+  outline: none;
+}
+
+.handleBar {
+  display: block;
+  width: 3px;
+  height: 100%;
+  background: var(--color-accent);
+  box-shadow: 0 0 8px var(--color-accent-glow);
+  position: relative;
+}
+
+.handleBar::before,
+.handleBar::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.handleBar::before {
+  left: -16px;
+}
+
+.handleBar::after {
+  display: none; /* single circle handle */
+}
+
+.labelBefore,
+.labelAfter {
+  position: absolute;
+  top: var(--space-3);
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2em 0.6em;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--color-text);
+  pointer-events: none;
+}
+
+.labelBefore {
+  left: var(--space-3);
+}
+
+.labelAfter {
+  right: var(--space-3);
+}
+
+.caption {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  font-style: italic;
+}

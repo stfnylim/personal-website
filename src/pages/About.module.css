@@ -1,0 +1,129 @@
+.main {
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding: var(--space-16) var(--space-6);
+  flex: 1;
+}
+
+.header {
+  margin-bottom: var(--space-12);
+}
+
+.title {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12) var(--space-16);
+  align-items: start;
+}
+
+/* ─── Bio ── */
+.bio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionHeading {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-accent);
+  margin-bottom: var(--space-2);
+}
+
+.bio p {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.bio strong {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ctaLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.ctaBtn {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  text-decoration: none;
+  padding: 0.45em 1.1em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.ctaBtn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-glow);
+  color: var(--color-text);
+}
+
+.ctaLink {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.ctaLink:hover {
+  color: var(--color-accent);
+}
+
+/* ─── Skills ── */
+.skills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.skillGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skillCategory {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.skillList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.skillPill {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.25em 0.7em;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+}
+
+/* ─── Responsive ── */
+@media (max-width: 768px) {
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}
