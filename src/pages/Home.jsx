@@ -6,9 +6,9 @@ import styles from './Home.module.css';
 const featured = getFeaturedProjects();
 
 const socialLinks = [
-  { href: 'https://linkedin.com/in/yourusername', label: 'LinkedIn' },
-  { href: 'https://github.com/yourusername',      label: 'GitHub' },
-  { href: '/resume.pdf',                          label: 'Resume ↓' },
+  { href: 'https://www.linkedin.com/in/stfnylim/',        label: 'LinkedIn' },
+  { href: 'https://github.com/stfnylim',                  label: 'GitHub' },
+  { href: '/Stephanie_Lim_Pipeline_TD_Disney.pdf',        label: 'Resume ↓' },
 ];
 
 export default function Home() {
@@ -22,15 +22,15 @@ export default function Home() {
             {/* Replace the div below with:
                 <img src="/images/headshot.jpg" alt="Your Name" />
             */}
-            <span className={styles.avatarInitials}>YN</span>
+            <span className={styles.avatarInitials}>SL</span>
           </div>
 
           <div className={styles.heroText}>
             <p className={styles.eyebrow}>Pipeline Technical Director</p>
-            <h1 className={styles.name}>Your Name</h1>
+            <h1 className={styles.name}>Stephanie Lim</h1>
             <p className={styles.tagline}>
-              I build the tools, pipelines, and automation that let VFX artists do their best work —
-              from asset ingestion to USD shot assembly to render farm orchestration.
+              Pipeline TD building tools, automation, and AI-assisted workflows for VFX production —
+              from crowd publishing pipelines to Maya MCP integrations.
             </p>
 
             <nav className={styles.socialLinks} aria-label="Social links">

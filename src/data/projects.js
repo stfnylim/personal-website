@@ -16,249 +16,240 @@
 export const projects = [
   // ─────────────────────────────────────────────────────────────────────────
   {
-    id: 'asset-ingestion-pipeline',
-    title: 'Asset Ingestion Pipeline',
+    id: 'crowd-publishing-pipeline',
+    title: 'Crowd Publishing Pipeline',
     shortDescription:
-      'Fully automated asset validation and USD publishing pipeline that cut vendor turnaround from hours to under 90 seconds.',
-    thumbnail: null, // replace with '/images/projects/asset-pipeline-thumb.jpg'
-    date: '2024-11',
-    role: 'Pipeline TD — architecture, implementation, deployment',
-    tools: ['Python', 'Houdini', 'SideFX PDG', 'USD / OpenUSD', 'PostgreSQL', 'Docker'],
-    tags: ['Pipeline', 'Automation', 'USD', 'Houdini'],
+      'Golaem crowd publishing applications for Maya with full asset versioning across agents, caches, and behaviors — built for VFX production at MakeMake Entertainment.',
+    thumbnail: null,
+    date: '2024-03',
+    role: 'Pipeline TD — tool development, validator integration, production deployment',
+    tools: ['Python', 'Maya', 'Golaem', 'PyMEL', 'PySide2'],
+    tags: ['Crowd', 'Maya', 'Pipeline', 'Golaem'],
     featured: true,
+    passwordHash: 'e165564efd5942f09bbb034de93326095f3863ab36e626a110364810cac15401',
 
     sections: [
       {
         type: 'text',
         heading: 'Overview',
-        body: `Incoming assets from vendors and outsource studios arrived in inconsistent formats — varying naming conventions, mismatched coordinate systems, missing LODs, and unvalidated textures. This pipeline standardises everything automatically before assets ever reach an artist's desk.`,
-      },
-      {
-        type: 'video',
-        src: null, // replace with '/videos/asset-pipeline-demo.mp4'
-        // To support WebM fallback, provide both:
-        // sources: [{ src: '/videos/demo.webm', type: 'video/webm' }, { src: '/videos/demo.mp4', type: 'video/mp4' }]
-        poster: null, // replace with '/images/projects/asset-pipeline-poster.jpg'
-        caption: 'End-to-end ingestion: raw vendor delivery → validated, published USD asset in under 90 seconds.',
+        body: `At MakeMake Entertainment, crowd shots required coordinating multiple layers of Golaem data — agent definitions, simulation caches, behavior graphs, and material assignments — with no standardised versioning or validation between departments. I built a suite of publishing applications inside Maya that brought this process under production control.`,
       },
       {
         type: 'text',
-        heading: 'Problem',
-        body: `Each vendor delivery required 3–4 hours of manual cleanup: fixing naming, reorienting geometry, converting texture colour spaces, and generating missing LODs. There was no audit trail for what changed between versions, and errors routinely surfaced in dailies rather than at intake.`,
+        heading: 'Publishing Applications',
+        body: `Each publish application handles a specific Golaem asset type — agents, caches, and behaviors — with independent versioning so departments can iterate without stepping on each other. A central manifest tracks which version of each component is active per shot, making it straightforward to roll back a bad agent update without disturbing an approved cache.`,
       },
       {
         type: 'text',
-        heading: 'Solution',
-        body: `A three-stage PDG graph watches a shared drop folder via a Docker file-watcher service. Stage 1 (Intake) extracts and fingerprints deliveries. Stage 2 (Validate) runs geometry, UV, texture, and naming checks. Stage 3 (Publish) converts to USD, applies the studio's layer structure, writes metadata to Postgres, and posts a thumbnail render to Slack.`,
+        heading: 'Validation Layer',
+        body: `Before any asset is committed, the pipeline runs a suite of validators covering missing materials, unresolved shader references, absent textures, and missing auxiliary files such as geometry caches and behavior data. Errors are surfaced with actionable messages directly in the Maya UI rather than discovered downstream in lighting or rendering.`,
       },
       {
         type: 'code',
         language: 'python',
-        caption: 'Mesh validator — geometry and UV checks (simplified)',
-        code: `from dataclasses import dataclass
+        caption: 'Crowd asset validator — material and texture checks (simplified)',
+        code: `from dataclasses import dataclass, field
 from typing import List
-import hou
+import maya.cmds as cmds
 
 
 @dataclass
-class ValidationError:
-    code: str
-    message: str
+class ValidationResult:
+    passed: bool
+    errors: List[str] = field(default_factory=list)
 
 
-def validate_mesh(geo: hou.Geometry, config: "AssetConfig") -> List[ValidationError]:
-    errors: List[ValidationError] = []
+def validate_agent_materials(agent_node: str) -> ValidationResult:
+    errors = []
 
-    if geo.countPrimType(hou.primType.Polygon) == 0:
-        errors.append(ValidationError("MESH_EMPTY", "No polygon primitives found"))
+    # Collect all shading engines assigned to agent geometry
+    shapes = cmds.listRelatives(agent_node, allDescendents=True, type="mesh") or []
+    for shape in shapes:
+        shading_groups = cmds.listConnections(shape, type="shadingEngine") or []
+        if not shading_groups:
+            errors.append(f"No material assigned to: {shape}")
+            continue
 
-    if geo.findPointAttrib("uv") is None:
-        errors.append(ValidationError("UV_MISSING", "Mesh has no UV attribute"))
+        for sg in shading_groups:
+            surface_shader = cmds.listConnections(f"{sg}.surfaceShader") or []
+            if not surface_shader:
+                errors.append(f"Empty shading group on: {shape}")
+                continue
 
-    poly_count = geo.intrinsicValue("primitivecount")
-    if poly_count > config.max_poly_count:
-        errors.append(
-            ValidationError(
-                "POLY_LIMIT_EXCEEDED",
-                f"Poly count {poly_count:,} exceeds project limit {config.max_poly_count:,}",
-            )
-        )
+            # Check all file texture nodes for missing files
+            file_nodes = cmds.listConnections(surface_shader[0], type="file") or []
+            for fn in file_nodes:
+                tex_path = cmds.getAttr(f"{fn}.fileTextureName")
+                if not tex_path or not __import__("os").path.exists(tex_path):
+                    errors.append(f"Missing texture on {fn}: {tex_path!r}")
 
-    return errors
+    return ValidationResult(passed=len(errors) == 0, errors=errors)
 `,
       },
       {
-        type: 'stats',
-        heading: 'Results',
-        rows: [
-          { metric: 'Avg. ingestion time',           before: '3–4 hours',  after: '~90 seconds' },
-          { metric: 'Validation errors caught early', before: '~30 %',      after: '~95 %' },
-          { metric: 'Manual touch-ups per delivery',  before: '10–12',      after: '1–2' },
-        ],
-      },
-      {
-        type: 'gallery',
-        images: [
-          { src: null, alt: 'PDG graph overview — three-stage network' },
-          { src: null, alt: 'Validation report UI in Houdini' },
-          { src: null, alt: 'Published USD asset in stage viewer' },
-        ],
+        type: 'text',
+        heading: 'Production Impact',
+        body: `The toolset was deployed across active crowd-heavy productions at MakeMake, reducing the feedback loop between crowd TD and lighting from multiple days to a single publish-validate cycle. Validators catching missing files pre-publish eliminated a recurring class of lighting failures that had previously only surfaced at render time.`,
       },
     ],
   },
 
   // ─────────────────────────────────────────────────────────────────────────
   {
-    id: 'render-farm-orchestration',
-    title: 'Render Farm Orchestration & Cloud Bursting',
+    id: 'maya-mcp-assistant',
+    title: 'Maya MCP AI Assistant',
     shortDescription:
-      'Python orchestration layer on top of Deadline that adds intelligent job prioritisation, AWS Spot bursting, and a live production dashboard.',
-    thumbnail: null, // replace with '/images/projects/render-farm-thumb.jpg'
-    date: '2024-06',
-    role: 'Pipeline TD — architecture, backend services, dashboard',
-    tools: ['Python', 'AWS EC2 / Spot', 'Deadline', 'FastAPI', 'Redis', 'React', 'Grafana'],
-    tags: ['Render Farm', 'Cloud', 'AWS', 'Automation', 'Deadline'],
+      'An MCP server that connects an LLM directly to Maya, letting artists run commands, automate tasks, and troubleshoot issues through natural language — with a hybrid local/cloud architecture that cut inference costs by 90%.',
+    thumbnail: null,
+    date: '2025-03',
+    role: 'Pipeline TD — MCP server, Maya integration, LLM architecture',
+    tools: ['Python', 'Maya', 'MCP', 'Claude API', 'Ollama', 'FastAPI'],
+    tags: ['AI', 'Maya', 'MCP', 'Automation', 'LLM'],
     featured: true,
 
     sections: [
       {
         type: 'text',
         heading: 'Overview',
-        body: `The studio's on-prem render farm regularly hit capacity during crunch, causing missed dailies. Rather than purchasing hardware, I built an orchestration layer that bursts intelligently to AWS Spot instances and gives production full visibility into farm state through a live dashboard.`,
-      },
-      {
-        type: 'video',
-        src: null, // replace with '/videos/render-farm-dashboard.mp4'
-        poster: null,
-        caption: 'Live dashboard: on-prem vs. cloud capacity, job queue depth, and per-show cost tracking.',
+        body: `Repetitive Maya tasks — renaming hierarchies, fixing broken references, batch-exporting assets, diagnosing scene issues — consume a disproportionate amount of artist time. I built an MCP (Model Context Protocol) server that exposes Maya's Python API as a set of structured tools an LLM can call, giving artists a natural language interface to their DCC without leaving the application.`,
       },
       {
         type: 'text',
-        heading: 'Architecture',
-        body: `A FastAPI orchestrator sits between Deadline and AWS. A Redis-backed queue monitor triggers Spot instance requests when on-prem utilisation exceeds 85% for more than 5 minutes. Instances self-terminate after 15 minutes of idle time. Per-show daily spend caps are enforced via a pre-submit hook that shows artists an estimated cost before they queue.`,
+        heading: 'How It Works',
+        body: `The MCP server runs as a sidecar process alongside Maya, communicating over a local socket. It exposes tools for scene inspection, node manipulation, batch operations, and Maya command execution. An LLM client connects to the server and translates artist requests into tool calls — the results flow back as structured data the model uses to form its next action or a final response.`,
       },
       {
         type: 'code',
         language: 'python',
-        caption: 'Job priority scoring — composite of urgency, sequence weight, and re-render flag',
-        code: `from dataclasses import dataclass
+        caption: 'MCP tool definition — expose a Maya operation as an LLM-callable tool',
+        code: `from mcp.server import Server
+from mcp.types import Tool, TextContent
+import maya.cmds as cmds
+import json
+
+server = Server("maya-mcp")
 
 
-@dataclass
-class DeadlineJob:
-    due_in_hours: float
-    sequence: str
-    is_rerender: bool
-
-
-@dataclass
-class ShowConfig:
-    base_priority: int
-    sequence_weights: dict[str, int]  # e.g. {"sq010": 20, "sq020": 10}
-
-
-def compute_job_priority(job: DeadlineJob, config: ShowConfig) -> int:
-    """Return a Deadline priority value in the range [0, 100]."""
-    urgency_bonus   = 30 if job.due_in_hours < 4 else 0
-    sequence_bonus  = config.sequence_weights.get(job.sequence, 0)
-    rerender_penalty = -10 if job.is_rerender else 0
-
-    score = config.base_priority + urgency_bonus + sequence_bonus + rerender_penalty
-    return max(0, min(100, score))
-`,
-      },
-      {
-        type: 'stats',
-        heading: 'Results',
-        rows: [
-          { metric: 'Crunch-period render wait',       before: '6+ hours',    after: '<45 minutes' },
-          { metric: 'Peak cloud cost (AWS Spot/month)', before: 'N/A',         after: '~$2,100' },
-          { metric: '"Where is my render?" tickets',   before: 'High volume',  after: '−80%' },
-        ],
-      },
-    ],
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  {
-    id: 'shot-build-tool',
-    title: 'One-Click Shot Build Tool',
-    shortDescription:
-      'Houdini HDA + PyQt5 panel that assembles a fully layered USD shot — pulling assets, layout, FX caches, and lighting rigs — in a single click.',
-    thumbnail: null, // replace with '/images/projects/shot-build-thumb.jpg'
-    date: '2025-01',
-    role: 'Pipeline TD — USD schema design, tool UX, ShotGrid integration',
-    tools: ['Python', 'USD / OpenUSD', 'Houdini', 'PyQt5', 'ShotGrid / Flow', 'Git LFS'],
-    tags: ['USD', 'Shot Build', 'Houdini', 'ShotGrid', 'Tools'],
-    featured: true,
-
-    sections: [
-      {
-        type: 'text',
-        heading: 'Overview',
-        body: `Setting up a shot from scratch required artists to manually wrangle USD sublayers, look up ShotGrid publishes, and track per-department version locks — a process taking 30–90 minutes per shot. This tool reduces it to a single button press and a confirmation dialog.`,
-      },
-      {
-        type: 'video',
-        src: null, // replace with '/videos/shot-build-demo.mp4'
-        poster: null,
-        caption: 'Full shot assembly — blank scene to lit, cache-loaded USD stage in ~8 seconds.',
-      },
-      {
-        type: 'text',
-        heading: 'USD Composition Stack',
-        body: `The tool queries ShotGrid for all published entities linked to the shot, resolves version locks and department overrides, then writes a strongly-typed sublayer stack. Each layer is a resolved ShotGrid publish path, so artists can pin, override, or advance individual departments without breaking others.`,
-      },
-      {
-        type: 'code',
-        language: 'python',
-        caption: 'Shot stage builder — creates the USD sublayer composition',
-        code: `from pathlib import Path
-from pxr import Usd, Sdf
-
-
-def build_shot_stage(shot: "ShotConfig", output_dir: Path) -> Usd.Stage:
-    """
-    Create a USD stage with a sublayer stack ordered from weakest to strongest:
-    layout → anim → fx → lighting → render_settings
-    """
-    stage_path = output_dir / "shot.usda"
-    stage = Usd.Stage.CreateNew(str(stage_path))
-    root_layer = stage.GetRootLayer()
-
-    # Resolve each department's latest (or pinned) publish from ShotGrid.
-    department_order = ["layout", "anim", "fx", "lighting", "render_settings"]
-    root_layer.subLayerPaths = [
-        str(shot.resolve_layer(dept)) for dept in department_order
+@server.list_tools()
+async def list_tools() -> list[Tool]:
+    return [
+        Tool(
+            name="list_scene_meshes",
+            description="Return all polygon mesh transforms in the current Maya scene.",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        Tool(
+            name="rename_node",
+            description="Rename a Maya node.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node": {"type": "string", "description": "Current node name"},
+                    "new_name": {"type": "string", "description": "Desired new name"},
+                },
+                "required": ["node", "new_name"],
+            },
+        ),
     ]
 
-    stage.SetStartTimeCode(shot.frame_range.start)
-    stage.SetEndTimeCode(shot.frame_range.end)
-    stage.Save()
-    return stage
+
+@server.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    if name == "list_scene_meshes":
+        meshes = cmds.ls(type="mesh", long=True) or []
+        transforms = [cmds.listRelatives(m, parent=True, fullPath=True)[0] for m in meshes]
+        return [TextContent(type="text", text=json.dumps(transforms))]
+
+    if name == "rename_node":
+        result = cmds.rename(arguments["node"], arguments["new_name"])
+        return [TextContent(type="text", text=result)]
+
+    raise ValueError(f"Unknown tool: {name}")
 `,
       },
       {
         type: 'text',
-        heading: 'Diff View',
-        body: `When re-opening an existing shot, the panel shows a diff of what changed since the last build — which departments advanced versions and what the new thumbnails look like — before the artist commits to updating.`,
-      },
-      {
-        type: 'gallery',
-        images: [
-          { src: null, alt: 'Main shot builder panel with department version list' },
-          { src: null, alt: 'Per-department version override dialog' },
-          { src: null, alt: 'Diff view — changes since last build' },
-        ],
+        heading: 'Hybrid LLM Architecture',
+        body: `Not every task needs a frontier model. The system routes requests through a two-tier architecture: routine, well-scoped operations (renaming, listing, querying) are handled by a locally-running quantised model via Ollama at zero API cost. Only complex reasoning tasks — multi-step scene fixes, ambiguous natural language, error diagnosis — are escalated to a cloud API. This routing logic reduced inference spend by approximately 90% compared to sending all requests to the cloud API.`,
       },
       {
         type: 'stats',
         heading: 'Results',
         rows: [
-          { metric: 'Shot setup time',                  before: '30–90 min',   after: '<2 min' },
-          { metric: 'Version mismatch errors in dailies', before: 'Common',    after: '−90%' },
-          { metric: 'Shows adopted within 2 months',    before: '—',           after: '3 shows' },
+          { metric: 'AI inference cost reduction', before: 'Baseline', after: '−90%' },
+          { metric: 'Architecture', before: 'Cloud-only', after: 'Local + cloud hybrid' },
+          { metric: 'Artist interface', before: 'Python script editor', after: 'Natural language' },
         ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'texture-classification-model',
+    title: 'Texture Classification Model',
+    shortDescription:
+      'Ongoing R&D: a machine learning model for automatic texture classification to support pipeline-level asset organisation. Built alongside Stanford\'s XCS229 ML program.',
+    thumbnail: null,
+    date: '2025-04',
+    role: 'R&D — model design, training pipeline, dataset curation',
+    tools: ['Python', 'PyTorch', 'scikit-learn', 'NumPy', 'Jupyter'],
+    tags: ['Machine Learning', 'R&D', 'Python', 'Computer Vision'],
+    featured: true,
+
+    sections: [
+      {
+        type: 'text',
+        heading: 'Overview',
+        body: `Texture libraries in production grow fast and rarely get organised. Artists spend real time hunting for the right roughness map or searching for which albedo belongs to which asset. This ongoing R&D project explores training a classification model that can automatically label and organise textures by type — diffuse, roughness, normal, emissive, AO — directly from image content, without relying on filename conventions.`,
+      },
+      {
+        type: 'text',
+        heading: 'Context',
+        body: `This project runs in parallel with Stanford's XCS229 Machine Learning program, which covers supervised learning, neural networks, and model evaluation in depth. The coursework provides the theoretical foundation; this project is the applied counterpart — a real production problem to validate ideas against.`,
+      },
+      {
+        type: 'text',
+        heading: 'Approach',
+        body: `The initial approach uses a fine-tuned convolutional network trained on a curated dataset of labelled PBR textures. Early experiments with a simple CNN baseline showed strong separation between diffuse and normal maps but poor discrimination between roughness and AO channels, which share similar frequency profiles. Current work is exploring channel statistics and frequency-domain features as additional inputs to improve that boundary.`,
+      },
+      {
+        type: 'code',
+        language: 'python',
+        caption: 'Dataset class — loads and preprocesses texture images for training',
+        code: `from pathlib import Path
+from PIL import Image
+import torch
+from torch.utils.data import Dataset
+from torchvision import transforms
+
+TEXTURE_CLASSES = ["diffuse", "normal", "roughness", "ao", "emissive"]
+
+class TextureDataset(Dataset):
+    def __init__(self, root: Path, split: str = "train"):
+        self.samples = []
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+        ])
+        for label, cls in enumerate(TEXTURE_CLASSES):
+            for img_path in (root / split / cls).glob("*.png"):
+                self.samples.append((img_path, label))
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, idx: int):
+        path, label = self.samples[idx]
+        image = Image.open(path).convert("RGB")
+        return self.transform(image), label
+`,
+      },
+      {
+        type: 'text',
+        heading: 'Status',
+        body: `Active R&D — currently iterating on feature engineering and evaluating lightweight architectures suitable for running as a pipeline utility (fast inference, low memory footprint). The goal is a model that can be dropped into an asset ingestion pipeline and run as a validation or auto-tagging step without requiring a GPU at inference time.`,
       },
     ],
   },

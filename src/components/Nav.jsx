@@ -12,7 +12,7 @@ export default function Nav() {
     <header className={styles.header}>
       <nav className={styles.nav}>
         <NavLink to="/" className={styles.logo}>
-          your.name<span className={styles.dot}>.</span>dev
+          stephlim<span className={styles.dot}>.</span>info
         </NavLink>
 
         <ul className={styles.links}>

@@ -2,18 +2,18 @@ import styles from './About.module.css';
 
 const skills = {
   'Pipeline & Tooling': [
-    'USD / OpenUSD', 'SideFX PDG', 'Houdini HDAs', 'Deadline',
-    'ShotGrid / Flow', 'Asset Management', 'Shot Build Systems',
+    'Maya', 'Golaem', 'ShotGrid / Flow', 'Asset Management',
+    'Publishing Pipelines', 'Validator Frameworks',
   ],
   'Languages': [
-    'Python', 'Bash / Shell', 'MEL', 'VEX', 'JavaScript',
+    'Python', 'MEL', 'PyMEL', 'Bash / Shell', 'JavaScript',
   ],
-  'Infrastructure': [
-    'Docker', 'AWS (EC2, S3, Spot)', 'Git / Git LFS', 'PostgreSQL',
-    'Redis', 'FastAPI',
+  'AI & ML': [
+    'MCP (Model Context Protocol)', 'LLM Integration', 'Ollama',
+    'Claude API', 'PyTorch', 'scikit-learn',
   ],
   'DCC Applications': [
-    'Houdini', 'Maya', 'Nuke', 'Katana', 'Substance',
+    'Maya', 'Houdini', 'Nuke', 'Golaem',
   ],
 };
 
@@ -29,23 +29,23 @@ export default function About() {
         <section className={styles.bio}>
           <h2 className={styles.sectionHeading}>Background</h2>
           <p>
-            I'm a Pipeline Technical Director with X years of experience building production
-            infrastructure for VFX and animation studios. I specialise in the boundary between
-            software engineering and production workflow — writing tools that artists actually
-            want to use.
+            I'm a Pipeline Technical Director building production tools and automation for VFX studios.
+            My focus is the intersection of software engineering and artist workflow — writing systems
+            that are reliable enough to trust in production and ergonomic enough that artists actually use them.
           </p>
           <p>
-            My work spans USD pipeline architecture, render farm automation, asset ingestion
-            systems, and the small day-to-day scripts that save an artist an hour of frustration.
+            Recent work includes crowd publishing pipelines for Golaem in Maya, an MCP-based AI
+            assistant that connects LLMs directly to Maya, and ongoing ML research into texture
+            classification as part of Stanford's XCS229 program.
           </p>
           <p>
-            Previously at <strong>Studio Name</strong> and <strong>Studio Name</strong>.
-            Currently open to senior Pipeline TD and Lead roles.
+            Previously at <strong>MakeMake Entertainment</strong>.
+            Open to Pipeline TD and Lead roles.
           </p>
 
           <div className={styles.ctaLinks}>
-            <a href="/resume.pdf" className={styles.ctaBtn}>Download Resume ↓</a>
-            <a href="mailto:you@yourdomain.com" className={styles.ctaLink}>you@yourdomain.com</a>
+            <a href="/Stephanie_Lim_Pipeline_TD_Disney.pdf" className={styles.ctaBtn}>Download Resume ↓</a>
+            <a href="https://www.linkedin.com/in/stfnylim/" target="_blank" rel="noopener noreferrer" className={styles.ctaLink}>LinkedIn</a>
           </div>
         </section>
 
