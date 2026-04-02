@@ -6,7 +6,7 @@ export default defineConfig({
 
   // Set to '/repo-name/' when deploying to username.github.io/repo-name.
   // Change back to '/' if you later point a custom domain at the site.
-  base: '/personal-website/',
+  base: '/',
 
   build: {
     chunkSizeWarningLimit: 700, // react-syntax-highlighter is ~630 kB min; it's isolated and cached
