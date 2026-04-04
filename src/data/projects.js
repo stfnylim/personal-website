@@ -186,70 +186,134 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
   // ─────────────────────────────────────────────────────────────────────────
   {
-    id: 'texture-classification-model',
-    title: 'Texture Classification Model',
+    id: 'pbr-texture-generator',
+    title: 'PBR Texture Generator',
     shortDescription:
-      'Ongoing R&D: a machine learning model for automatic texture classification to support pipeline-level asset organisation. Built alongside Stanford\'s XCS229 ML program.',
+      'Ongoing R&D: a machine learning pipeline that generates PBR material maps (normal, roughness, displacement, AO) from a single diffuse texture, with a Maya plugin for one-click material creation.',
     thumbnail: null,
-    date: '2025-04',
-    role: 'R&D — model design, training pipeline, dataset curation',
-    tools: ['Python', 'PyTorch', 'scikit-learn', 'NumPy', 'Jupyter'],
-    tags: ['Machine Learning', 'R&D', 'Python', 'Computer Vision'],
+    date: '2026-01',
+    role: 'R&D — dataset pipeline, model architecture, training, Maya tooling',
+    tools: ['Python', 'PyTorch', 'CLIP', 'VRay', 'Maya', 'Conda'],
+    tags: ['Machine Learning', 'R&D', 'Python', 'Computer Vision', 'Maya', 'VRay'],
     featured: true,
 
     sections: [
       {
         type: 'text',
         heading: 'Overview',
-        body: `Texture libraries in production grow fast and rarely get organised. Artists spend real time hunting for the right roughness map or searching for which albedo belongs to which asset. This ongoing R&D project explores training a classification model that can automatically label and organise textures by type — diffuse, roughness, normal, emissive, AO — directly from image content, without relying on filename conventions.`,
+        body: `Sourcing and authoring PBR textures is time-consuming. This project trains a pix2pix-style U-Net to predict physically-based material maps — normal, roughness, displacement, and ambient occlusion — directly from a diffuse photograph. The model is conditioned on text captions via CLIP embeddings, allowing it to leverage material descriptions to guide map generation. A companion Maya plugin lets artists point at any diffuse texture, hit Generate, and get a fully wired VRay or Standard Surface material in seconds.`,
       },
       {
         type: 'text',
-        heading: 'Context',
-        body: `This project runs in parallel with Stanford's XCS229 Machine Learning program, which covers supervised learning, neural networks, and model evaluation in depth. The coursework provides the theoretical foundation; this project is the applied counterpart — a real production problem to validate ideas against.`,
+        heading: 'Dataset',
+        body: `The training data comes from the CGAxis PBR texture library — over 2,200 physical materials spanning wood, concrete, fabric, metal, and more. Each material was processed through a custom augmentation pipeline: source textures were downscaled from 4K/8K to 2K, then cropped into 256×256 patches using both grid-aligned and random crop strategies. Geometric augmentations (flips, 90° rotations) and appearance augmentations (colour jitter, gamma, Gaussian noise on the diffuse only) brought the total to 848,256 training patches. Text captions were auto-generated from material IDs by parsing out numeric tokens and noise words, then reviewed manually.`,
+      },
+      {
+        type: 'stats',
+        heading: 'Dataset Scale',
+        rows: [
+          { metric: 'Source materials', before: '—', after: '2,209' },
+          { metric: 'Patches per material', before: '—', after: '384 (64 crops × 6 augmentations)' },
+          { metric: 'Total training patches', before: '—', after: '848,256' },
+          { metric: 'Patch resolution', before: '—', after: '256 × 256 px' },
+          { metric: 'Output maps', before: '—', after: 'Normal, Roughness, Displacement, AO' },
+        ],
       },
       {
         type: 'text',
-        heading: 'Approach',
-        body: `The initial approach uses a fine-tuned convolutional network trained on a curated dataset of labelled PBR textures. Early experiments with a simple CNN baseline showed strong separation between diffuse and normal maps but poor discrimination between roughness and AO channels, which share similar frequency profiles. Current work is exploring channel statistics and frequency-domain features as additional inputs to improve that boundary.`,
+        heading: 'Model — Phase 1: L1 + Perceptual (Base Model)',
+        body: `The generator is a U-Net with four encoder/decoder stages and a ResBlock bottleneck. Skip connections concatenate encoder features before upsampling to avoid spatial mismatches. Each decoder block applies FiLM (Feature-wise Linear Modulation) using a frozen CLIP text encoder, so the same architecture can be guided by material descriptions like "teak wood planks" or "painted concrete". The loss function combines per-map L1 and VGG-16 perceptual loss on the normal channel (which benefits most from high-frequency sharpness). Training ran on an RTX 4090 with AMP and CUDA benchmark mode enabled for 17 epochs.`,
+      },
+      {
+        type: 'gallery',
+        heading: 'Base Model — Epoch 1 vs Epoch 17',
+        images: [
+          {
+            src: '/images/pbr_base_epoch_001.png',
+            alt: 'Base model output at epoch 1 — early training, maps are noisy and undefined',
+          },
+          {
+            src: '/images/pbr_base_epoch_017.png',
+            alt: 'Base model output at epoch 17 — structure is correct but normal maps appear blurry',
+          },
+        ],
+      },
+      {
+        type: 'text',
+        heading: 'Why the Base Model Wasn\'t Enough',
+        body: `By epoch 17 the model had learned the correct structure — roughness, displacement, and AO were reading well — but the normal maps were noticeably blurry. This is a known failure mode of L1 loss: because L1 penalises the generator equally for any wrong prediction, the safest strategy is to output the average of all plausible normals. The result is smooth, averaged-out detail rather than the sharp surface information a renderer needs. Perceptual loss on the normal channel helps somewhat but isn't enough on its own to recover fine surface detail. The model needed a signal that explicitly rewards sharpness — which is what the adversarial discriminator provides.`,
       },
       {
         type: 'code',
         language: 'python',
-        caption: 'Dataset class — loads and preprocesses texture images for training',
-        code: `from pathlib import Path
-from PIL import Image
-import torch
-from torch.utils.data import Dataset
-from torchvision import transforms
+        caption: 'FiLM conditioning — CLIP text embedding modulates each decoder feature map',
+        code: `class FiLMLayer(nn.Module):
+    def __init__(self, clip_dim: int, channels: int) -> None:
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(clip_dim, 256),
+            nn.ReLU(inplace=True),
+            nn.Linear(256, channels * 2),
+        )
+        # Zero-init last layer so training starts from identity
+        nn.init.zeros_(self.mlp[-1].weight)
+        nn.init.zeros_(self.mlp[-1].bias)
+        self.mlp[-1].bias.data[:channels] = 1.0  # gamma bias = 1
 
-TEXTURE_CLASSES = ["diffuse", "normal", "roughness", "ao", "emissive"]
+    def forward(self, x: torch.Tensor, text_emb: torch.Tensor) -> torch.Tensor:
+        params      = self.mlp(text_emb)
+        gamma, beta = params.chunk(2, dim=1)
+        gamma       = gamma.view(-1, x.size(1), 1, 1)
+        beta        = beta.view(-1, x.size(1), 1, 1)
+        return gamma * x + beta`,
+      },
+      {
+        type: 'text',
+        heading: 'Model — Phase 2: PatchGAN Adversarial Training',
+        body: `To address blurry normals, a PatchGAN discriminator was added. The discriminator takes the concatenated diffuse + target maps (9 channels total) and outputs a score map where each value judges a local patch as real or fake. This pushes the generator toward sharper, higher-frequency detail that L1 alone won't produce. Several stability issues had to be resolved through iteration: NaN values from float16 overflow in BCE loss (fixed by casting discriminator logits to float32), warmup epoch counting bugs when resuming from a pre-trained checkpoint, and the discriminator dominating the generator after ~25 epochs. The final architecture uses spectral normalization on all discriminator convolutions (constraining Lipschitz constant to prevent exploding logits) and hinge loss in place of BCE. Both changes together make training significantly more stable.`,
+      },
+      {
+        type: 'stats',
+        heading: 'PatchGAN Training Iterations',
+        rows: [
+          { metric: 'Run 1 — pbr_model_patchgan', before: 'Collapsed at epoch 21', after: 'adv_weight 0.05 too high, no warmup, float16 NaN in BCE' },
+          { metric: 'Run 2 — pbr_model_patchgan2', before: 'Collapsed at epoch 32', after: 'float32 cast added, warmup fixed, adv_weight 0.005' },
+          { metric: 'Run 3 — pbr_model_patchgan3', before: 'Collapsed at epoch 32', after: 'best checkpoint bug — every-epoch overwrite hit NaN state' },
+          { metric: 'Run 4 — pbr_model_patchgan4', before: 'Active', after: 'Spectral norm + hinge loss + NaN guard on checkpoint save' },
+        ],
+      },
+      {
+        type: 'text',
+        heading: 'Inference Pipeline',
+        body: `At inference time, the generator runs in tiled mode so it can handle any input resolution — useful since production textures are typically 2K or 4K. A 256×256 sliding window sweeps the image with configurable overlap, and tiles are blended using a cosine weight window so no hard seams appear at tile boundaries. The CLI outputs named PNG files into a folder matching the material name, stripping common suffixes like _diffuse from the stem.`,
+      },
+      {
+        type: 'code',
+        language: 'python',
+        caption: 'Cosine-weighted tile blending — prevents seams at tile boundaries',
+        code: `def _cosine_window(size: int) -> torch.Tensor:
+    w = torch.linspace(0, torch.pi, size)
+    return (1 - torch.cos(w)) / 2.0
 
-class TextureDataset(Dataset):
-    def __init__(self, root: Path, split: str = "train"):
-        self.samples = []
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
-        ])
-        for label, cls in enumerate(TEXTURE_CLASSES):
-            for img_path in (root / split / cls).glob("*.png"):
-                self.samples.append((img_path, label))
+def _make_weight_map(h: int, w: int) -> torch.Tensor:
+    wy = _cosine_window(h)
+    wx = _cosine_window(w)
+    return wy[:, None] * wx[None, :]  # (h, w)
 
-    def __len__(self) -> int:
-        return len(self.samples)
-
-    def __getitem__(self, idx: int):
-        path, label = self.samples[idx]
-        image = Image.open(path).convert("RGB")
-        return self.transform(image), label
-`,
+# During inference, accumulate weighted predictions across all tiles:
+out_sum    += pred * weight_map
+weight_sum += weight_map
+blended     = out_sum / weight_sum.clamp(min=1e-6)`,
+      },
+      {
+        type: 'text',
+        heading: 'Maya Plugin',
+        body: `A Maya plugin provides a GUI for the full workflow: browse for a diffuse texture, set a checkpoint and output folder, enter a material caption, and choose between VRay and Standard Surface. Inference runs in a background subprocess using the pbr-training conda environment so Maya never freezes. Once maps are generated, the plugin calls the Substance plugin's substanceRunImageWorkflow MEL command — discovered by reading the Substance plugin source — to create a properly wired material with all maps connected. A second "Update Material" mode finds the existing file nodes on a selected material and swaps their paths in-place, matching the Substance "Apply to Image Maps" behaviour.`,
       },
       {
         type: 'text',
         heading: 'Status',
-        body: `Active R&D — currently iterating on feature engineering and evaluating lightweight architectures suitable for running as a pipeline utility (fast inference, low memory footprint). The goal is a model that can be dropped into an asset ingestion pipeline and run as a validation or auto-tagging step without requiring a GPU at inference time.`,
+        body: `Active R&D. The base model and PatchGAN training are running. The Maya plugin produces working VRay materials via the Substance plugin integration. Next steps: evaluate sharpness of PatchGAN epoch checkpoints visually, select the best epoch for production use, and test on a broader range of material types beyond wood.`,
       },
     ],
   },
