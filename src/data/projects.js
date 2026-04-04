@@ -99,11 +99,11 @@ def validate_agent_materials(agent_node: str) -> ValidationResult:
     id: 'maya-mcp-assistant',
     title: 'Maya MCP AI Assistant',
     shortDescription:
-      'An MCP server that connects an LLM directly to Maya, letting artists run commands, automate tasks, and troubleshoot issues through natural language — with a hybrid local/cloud architecture that cut inference costs by 90%.',
+      'A natural language agent for Maya built across three iterations — evolving from a simple Claude proxy to a three-layer autonomous agent with code-first execution, scene state validation, and a native dockable GUI.',
     thumbnail: null,
     date: '2025-03',
-    role: 'Pipeline TD — MCP server, Maya integration, LLM architecture',
-    tools: ['Python', 'Maya', 'MCP', 'Claude API', 'Ollama', 'FastAPI'],
+    role: 'Pipeline TD — MCP server, Maya integration, LLM architecture, GUI',
+    tools: ['Python', 'Maya', 'MCP', 'Claude API', 'Ollama', 'FastAPI', 'PySide2'],
     tags: ['AI', 'Maya', 'MCP', 'Automation', 'LLM'],
     featured: true,
 
@@ -111,24 +111,23 @@ def validate_agent_materials(agent_node: str) -> ValidationResult:
       {
         type: 'text',
         heading: 'Overview',
-        body: `Repetitive Maya tasks — renaming hierarchies, fixing broken references, batch-exporting assets, diagnosing scene issues — consume a disproportionate amount of artist time. I built an MCP (Model Context Protocol) server that exposes Maya's Python API as a set of structured tools an LLM can call, giving artists a natural language interface to their DCC without leaving the application.`,
+        body: `Repetitive Maya tasks — renaming hierarchies, fixing broken references, batch-exporting assets, diagnosing scene issues — consume a disproportionate amount of artist time. This project explores giving artists a natural language interface to Maya through three progressively more capable architectures, each one addressing the failure modes of the last.`,
       },
       {
         type: 'text',
-        heading: 'How It Works',
-        body: `The MCP server runs as a sidecar process alongside Maya, communicating over a local socket. It exposes tools for scene inspection, node manipulation, batch operations, and Maya command execution. An LLM client connects to the server and translates artist requests into tool calls — the results flow back as structured data the model uses to form its next action or a final response.`,
+        heading: 'V1 — Claude Proxy with MCP Tools',
+        body: `The first version used Anthropic's Model Context Protocol to expose 10 Maya operations as structured tools that Claude could call. A FastAPI web server embedded in a Qt browser window inside Maya served as the UI. An MCP client ran in a subprocess and routed between the web server, Claude's API, and Maya's command port over TCP. Claude handled all reasoning — the system was essentially a proxy that formatted requests into tool calls and piped results back. Prompt caching after 8 messages kept API costs manageable. The main limitation was that the tool set was small and fixed, and Claude had to decide everything; there was no autonomous reasoning loop or error recovery.`,
       },
       {
         type: 'code',
         language: 'python',
-        caption: 'MCP tool definition — expose a Maya operation as an LLM-callable tool',
+        caption: 'V1 — MCP tool definition. Maya operations exposed as structured schemas for Claude to call.',
         code: `from mcp.server import Server
 from mcp.types import Tool, TextContent
 import maya.cmds as cmds
 import json
 
 server = Server("maya-mcp")
-
 
 @server.list_tools()
 async def list_tools() -> list[Tool]:
@@ -152,34 +151,82 @@ async def list_tools() -> list[Tool]:
         ),
     ]
 
-
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name == "list_scene_meshes":
         meshes = cmds.ls(type="mesh", long=True) or []
         transforms = [cmds.listRelatives(m, parent=True, fullPath=True)[0] for m in meshes]
         return [TextContent(type="text", text=json.dumps(transforms))]
-
     if name == "rename_node":
         result = cmds.rename(arguments["node"], arguments["new_name"])
         return [TextContent(type="text", text=result)]
-
-    raise ValueError(f"Unknown tool: {name}")
-`,
+    raise ValueError(f"Unknown tool: {name}")`,
       },
       {
         type: 'text',
-        heading: 'Hybrid LLM Architecture',
-        body: `Not every task needs a frontier model. The system routes requests through a two-tier architecture: routine, well-scoped operations (renaming, listing, querying) are handled by a locally-running quantised model via Ollama at zero API cost. Only complex reasoning tasks — multi-step scene fixes, ambiguous natural language, error diagnosis — are escalated to a cloud API. This routing logic reduced inference spend by approximately 90% compared to sending all requests to the cloud API.`,
+        heading: 'V2 — ReAct Loop with 60+ Tools and Intelligent Selection',
+        body: `V2 replaced Claude with a local Ollama model to eliminate API costs entirely and introduced a full ReAct (Reasoning + Acting) loop. The tool library grew from 10 to 60+ operations across scene management, object creation, modeling, materials, animation, and rigging — too many to include in a single context window. A second LLM call at the start of each request intelligently selected the 15 most relevant tools based on the task description, then the main loop planned, acted, and verified. A TaskVerifier injected self-check prompts every 3 iterations. Conversation history persisted to disk between sessions. The transport moved from MCP stdio to plain HTTP. The main remaining issue was that JSON tool-calling proved unreliable with local quantised models — the LLM would hallucinate tool names or malform arguments, causing frequent failures.`,
       },
       {
         type: 'stats',
-        heading: 'Results',
+        heading: 'V1 → V2 Changes',
         rows: [
-          { metric: 'AI inference cost reduction', before: 'Baseline', after: '−90%' },
-          { metric: 'Architecture', before: 'Cloud-only', after: 'Local + cloud hybrid' },
-          { metric: 'Artist interface', before: 'Python script editor', after: 'Natural language' },
+          { metric: 'LLM backend', before: 'Claude API (cloud)', after: 'Ollama (local, zero cost)' },
+          { metric: 'Tool count', before: '10', after: '60+' },
+          { metric: 'Tool selection', before: 'All in context', after: 'LLM picks 15 relevant tools' },
+          { metric: 'Reasoning', before: 'Claude decides', after: 'ReAct loop with planner' },
+          { metric: 'Self-verification', before: 'None', after: 'TaskVerifier every 3 steps' },
+          { metric: 'Conversation', before: 'Stateless', after: 'Persistent to disk' },
         ],
+      },
+      {
+        type: 'text',
+        heading: 'V3 — Code-First Execution with Three-Layer Architecture',
+        body: `V3 abandoned JSON tool-calling entirely. Instead of asking the LLM to select and call predefined tools, the executor asks it to write Python code wrapped in <action> tags — which is extracted with a simple regex and run directly in Maya. This proved significantly more reliable with local models, which are better at generating code than following rigid JSON schemas. The architecture split into three explicit layers: a Planner that breaks requests into ordered natural language steps, an Executor that generates and runs code for each step with retry logic, and a Validator that takes scene snapshots before and after each step and compares deltas to verify success. A circuit breaker tracks consecutive errors, iteration count, session time, token budget, and semantic loop detection (using string similarity to catch repeated identical actions). A native dockable PySide2/PySide6 window replaced the browser-based UI, running the agent on a QRunnable thread pool so Maya's main thread never blocks. An optional hybrid mode switches between Ollama for routine steps and Claude for code generation when precision matters.`,
+      },
+      {
+        type: 'code',
+        language: 'python',
+        caption: 'V3 — Code-first execution. The LLM writes Python; the executor extracts and runs it.',
+        code: `import re
+import maya.cmds as cmds
+
+ACTION_PATTERN = re.compile(r"<action>(.*?)</action>", re.DOTALL)
+
+def extract_and_run(llm_response: str) -> dict:
+    """Extract <action> blocks from LLM output and execute in Maya."""
+    match = ACTION_PATTERN.search(llm_response)
+    if not match:
+        return {"success": False, "error": "No <action> block found in response"}
+
+    code = match.group(1).strip()
+    namespace = {"cmds": cmds}
+    try:
+        cmds.undoInfo(openChunk=True, chunkName="agent_action")
+        exec(code, namespace)
+        cmds.undoInfo(closeChunk=True)
+        return {"success": True, "output": namespace.get("_result", None)}
+    except Exception as e:
+        cmds.undoInfo(closeChunk=True)
+        return {"success": False, "error": str(e), "code": code}`,
+      },
+      {
+        type: 'stats',
+        heading: 'V2 → V3 Changes',
+        rows: [
+          { metric: 'Tool calling', before: 'JSON schemas (60+ tools)', after: 'Code-first <action> tags (no tools)' },
+          { metric: 'Architecture', before: 'Two-layer (agent + server)', after: 'Three-layer (planner + executor + validator)' },
+          { metric: 'Validation', before: 'Heuristic self-check prompts', after: 'Scene delta comparison (before/after snapshots)' },
+          { metric: 'Safety', before: 'Iteration counter only', after: 'Circuit breaker (errors, timeout, token budget, loop detection)' },
+          { metric: 'Undo support', before: 'None', after: 'Each action wrapped in undoInfo chunk' },
+          { metric: 'GUI', before: 'None (CLI only)', after: 'Native dockable Maya window (PySide2/PySide6)' },
+          { metric: 'Hybrid mode', before: 'Ollama only', after: 'Ollama + Claude code oracle' },
+        ],
+      },
+      {
+        type: 'text',
+        heading: 'Status',
+        body: `V3 is the current production version. The three-layer design, code-first execution, and circuit breaker together make the agent reliable enough for real artist use. The hybrid Ollama/Claude mode balances cost and capability. Future work: streaming responses to the GUI for better feedback on long-running tasks, and finer-grained undo at the step level rather than per-action.`,
       },
     ],
   },
