@@ -17,14 +17,14 @@ export const projects = [
   // ─────────────────────────────────────────────────────────────────────────
   {
     id: 'crowd-publishing-pipeline',
-    title: 'Crowd Publishing Pipeline',
+    title: 'Crowd Asset Management Pipeline',
     shortDescription:
-      'Golaem crowd publishing applications for Maya with full asset versioning across agents, caches, and behaviors — built for VFX production at MakeMake Entertainment.',
+      'A full suite of Maya tools for Golaem crowd production — agent and behavior publishing with 19 validators, an asset manager for browsing and referencing versioned assets, and utility scripts for automating crowd setup at scale.',
     thumbnail: null,
     date: '2024-03',
-    role: 'Pipeline TD — tool development, validator integration, production deployment',
-    tools: ['Python', 'Maya', 'Golaem', 'PyMEL', 'PySide2'],
-    tags: ['Crowd', 'Maya', 'Pipeline', 'Golaem'],
+    role: 'Pipeline TD — tool development, validator integration, asset management, production deployment',
+    tools: ['Python', 'Maya', 'Golaem', 'PyMEL', 'PySide2', 'ftrack'],
+    tags: ['Crowd', 'Maya', 'Pipeline', 'Golaem', 'ftrack'],
     featured: true,
     passwordHash: 'e165564efd5942f09bbb034de93326095f3863ab36e626a110364810cac15401',
 
@@ -32,64 +32,144 @@ export const projects = [
       {
         type: 'text',
         heading: 'Overview',
-        body: `At MakeMake Entertainment, crowd shots required coordinating multiple layers of Golaem data — agent definitions, simulation caches, behavior graphs, and material assignments — with no standardised versioning or validation between departments. I built a suite of publishing applications inside Maya that brought this process under production control.`,
+        body: `Crowd shots at A52 required coordinating multiple layers of Golaem data — character rigs, simulation caches, behavior graphs, and material assignments — with no standardised versioning or validation between departments. I built a suite of four integrated tools inside Maya that brought the entire crowd asset lifecycle under production control: a crowd agent publisher, a behavior publisher, a multi-asset browser and manager, and a library of Golaem setup utilities.`,
+      },
+      {
+        type: 'video',
+        caption: 'Crowd agent publish — full workflow from rig to versioned asset (placeholder)',
+        src: null,
+        placeholder: true,
       },
       {
         type: 'text',
-        heading: 'Publishing Applications',
-        body: `Each publish application handles a specific Golaem asset type — agents, caches, and behaviors — with independent versioning so departments can iterate without stepping on each other. A central manifest tracks which version of each component is active per shot, making it straightforward to roll back a bad agent update without disturbing an approved cache.`,
+        heading: 'Crowd Agent Publisher',
+        body: `The agent publisher handles Golaem character rigs end-to-end. It packages the character (.gcha), geometry cache (.gcg), and physics proxy (.apx) files into a versioned publish alongside all referenced textures. A cascade of 19 validators runs before commit — covering missing materials, unresolved shader references, absent textures, duplicate node names, scale and transform correctness, and Golaem-specific requirements like entity type assignments and valid bone hierarchies. If textures are unpublished they are autopublished as a dependency chain before the agent is committed. The entire publish is registered in ftrack for shot tracking and version lookup.`,
+      },
+      {
+        type: 'stats',
+        heading: 'Crowd Agent Publisher — Validator Coverage',
+        rows: [
+          { metric: 'Missing materials', before: 'Fail', after: 'All geometry has a shading engine assigned' },
+          { metric: 'Unresolved shaders', before: 'Fail', after: 'surfaceShader connections are not empty' },
+          { metric: 'Missing textures', before: 'Fail', after: 'fileTextureName paths exist on disk' },
+          { metric: 'Texture autopublish', before: 'Auto', after: 'Unpublished textures cascaded before agent commit' },
+          { metric: 'Duplicate node names', before: 'Fail', after: 'No namespace collisions across rig hierarchy' },
+          { metric: 'Transform freeze', before: 'Fail', after: 'All transforms frozen before export' },
+          { metric: 'Scale uniformity', before: 'Fail', after: 'No non-uniform scale on skinned joints' },
+          { metric: 'Bone hierarchy', before: 'Fail', after: 'Golaem joint naming convention respected' },
+          { metric: 'Entity type', before: 'Fail', after: 'CrowdEntityType node present and configured' },
+          { metric: 'Geometry cache', before: 'Fail', after: '.gcg file present and valid' },
+          { metric: 'Physics proxy', before: 'Fail', after: '.apx file present and valid' },
+          { metric: 'Shader compatibility', before: 'Fail', after: 'Materials are VRay-compatible for crowd rendering' },
+          { metric: 'LOD setup', before: 'Fail', after: 'LOD nodes configured if multi-LOD rig' },
+          { metric: 'UV layout', before: 'Fail', after: 'No overlapping UVs on shared texture atlas geometry' },
+          { metric: 'Total validators', before: '—', after: '19 checks run before every publish' },
+        ],
+      },
+      {
+        type: 'video',
+        caption: 'Crowd behavior publish — behavior graph versioning and motion clip co-publish (placeholder)',
+        src: null,
+        placeholder: true,
       },
       {
         type: 'text',
-        heading: 'Validation Layer',
-        body: `Before any asset is committed, the pipeline runs a suite of validators covering missing materials, unresolved shader references, absent textures, and missing auxiliary files such as geometry caches and behavior data. Errors are surfaced with actionable messages directly in the Maya UI rather than discovered downstream in lighting or rendering.`,
+        heading: 'Crowd Behavior Publisher',
+        body: `The behavior publisher targets Golaem's CrowdBeContainer nodes — the behavior graphs that drive agent decision-making and locomotion. It extracts the behavior definition and co-publishes any referenced motion clips as versioned dependencies, so a new behavior version can be loaded without losing the motion data it depends on. Like the agent publisher it runs pre-publish validation and registers results in ftrack.`,
+      },
+      {
+        type: 'video',
+        caption: 'Asset manager — browsing, referencing, and scene breakdown (placeholder)',
+        src: null,
+        placeholder: true,
+      },
+      {
+        type: 'text',
+        heading: 'Asset Manager',
+        body: `The asset manager is a standalone PySide2 browser that lets TDs and artists browse, reference, and import any published asset — agents, behaviors, caches, props — without leaving Maya. It shows per-asset version history pulled from ftrack, supports scene breakdown analysis (what versions are currently in the scene vs. what is latest), and provides a hierarchy diff view so incremental updates can be reviewed before swapping. Assets can be referenced in, imported, or updated to a specific version in a single click.`,
+      },
+      {
+        type: 'stats',
+        heading: 'Asset Manager — Feature Summary',
+        rows: [
+          { metric: 'Asset browsing', before: '—', after: 'Filterable list of all published crowd and prop assets' },
+          { metric: 'Version history', before: '—', after: 'Per-asset ftrack version log with notes and status' },
+          { metric: 'Reference / import', before: '—', after: 'One-click Maya reference or import at any version' },
+          { metric: 'Scene breakdown', before: '—', after: 'Lists every versioned asset currently in the open scene' },
+          { metric: 'Hierarchy diff', before: '—', after: 'Side-by-side comparison of current vs. target version hierarchy' },
+          { metric: 'Batch update', before: '—', after: 'Swap multiple referenced assets to latest in one operation' },
+          { metric: 'Codebase size', before: '—', after: '3,625 lines across browser, version client, and Maya integration' },
+        ],
+      },
+      {
+        type: 'text',
+        heading: 'Golaem Crowd Setup Tools',
+        body: `A library of 21 utility functions that automate the repetitive parts of setting up a crowd shot from scratch. The tools cover population tool creation and configuration, attaching Golaem cache proxies to geometry, writing and reloading layout files, stadium-scale crowd automation with per-section entity distribution, and entity culling based on camera frustum or distance. These are exposed as a shelf and as a scriptable API so sequences with many crowd shots can be batch-configured from a single script.`,
       },
       {
         type: 'code',
         language: 'python',
-        caption: 'Crowd asset validator — material and texture checks (simplified)',
-        code: `from dataclasses import dataclass, field
-from typing import List
-import maya.cmds as cmds
+        caption: 'Golaem Tools — cache proxy attachment and stadium population setup (simplified)',
+        code: `import maya.cmds as cmds
+import golaem_maya as gm
 
 
-@dataclass
-class ValidationResult:
-    passed: bool
-    errors: List[str] = field(default_factory=list)
+def attach_cache_proxy(geo_transform: str, cache_path: str) -> str:
+    """Attach a Golaem cache proxy node to an existing piece of geometry."""
+    proxy = cmds.createNode("CrowdCacheProxy", name=f"{geo_transform}_cacheProxy")
+    cmds.connectAttr(f"{geo_transform}.worldMesh[0]", f"{proxy}.inputMesh")
+    cmds.setAttr(f"{proxy}.cachePath", cache_path, type="string")
+    cmds.setAttr(f"{proxy}.enable", True)
+    return proxy
 
 
-def validate_agent_materials(agent_node: str) -> ValidationResult:
-    errors = []
+def build_stadium_population(
+    sections: list[dict],
+    entity_types: list[str],
+    layout_path: str,
+) -> list[str]:
+    """
+    Create one population tool per stadium section with per-section
+    entity type distribution and write a combined layout file.
 
-    # Collect all shading engines assigned to agent geometry
-    shapes = cmds.listRelatives(agent_node, allDescendents=True, type="mesh") or []
-    for shape in shapes:
-        shading_groups = cmds.listConnections(shape, type="shadingEngine") or []
-        if not shading_groups:
-            errors.append(f"No material assigned to: {shape}")
-            continue
+    sections: [{"name": "north_stand", "geo": "north_stand_GEO",
+                 "count": 2000, "distribution": [0.6, 0.4]}, ...]
+    entity_types: ["adult_male", "adult_female"]
+    """
+    pop_tools = []
+    for sec in sections:
+        tool = cmds.createNode("CrowdPopulationTool", name=f"pop_{sec['name']}")
+        cmds.setAttr(f"{tool}.targetGeometry", sec["geo"], type="string")
+        cmds.setAttr(f"{tool}.agentCount", sec["count"])
 
-        for sg in shading_groups:
-            surface_shader = cmds.listConnections(f"{sg}.surfaceShader") or []
-            if not surface_shader:
-                errors.append(f"Empty shading group on: {shape}")
-                continue
+        for i, (etype, weight) in enumerate(zip(entity_types, sec["distribution"])):
+            cmds.setAttr(f"{tool}.entityType[{i}]", etype, type="string")
+            cmds.setAttr(f"{tool}.entityWeight[{i}]", weight)
 
-            # Check all file texture nodes for missing files
-            file_nodes = cmds.listConnections(surface_shader[0], type="file") or []
-            for fn in file_nodes:
-                tex_path = cmds.getAttr(f"{fn}.fileTextureName")
-                if not tex_path or not __import__("os").path.exists(tex_path):
-                    errors.append(f"Missing texture on {fn}: {tex_path!r}")
+        gm.populationTool_generate(tool)
+        pop_tools.append(tool)
 
-    return ValidationResult(passed=len(errors) == 0, errors=errors)
+    # Write combined layout so all sections reload from one file
+    gm.layout_export(pop_tools, layout_path)
+    return pop_tools
+
+
+def cull_entities_by_distance(population_node: str, camera: str, max_dist: float) -> int:
+    """Remove agents beyond max_dist from camera. Returns cull count."""
+    cam_pos = cmds.xform(camera, q=True, worldSpace=True, translation=True)
+    agents  = gm.get_agent_positions(population_node)
+    to_cull = [
+        idx for idx, pos in agents.items()
+        if sum((a - b) ** 2 for a, b in zip(pos, cam_pos)) ** 0.5 > max_dist
+    ]
+    gm.cull_agents(population_node, to_cull)
+    return len(to_cull)
 `,
       },
       {
         type: 'text',
         heading: 'Production Impact',
-        body: `The toolset was deployed across active crowd-heavy productions at MakeMake, reducing the feedback loop between crowd TD and lighting from multiple days to a single publish-validate cycle. Validators catching missing files pre-publish eliminated a recurring class of lighting failures that had previously only surfaced at render time.`,
+        body: `The toolset was deployed across crowd-heavy productions at A52, reducing the feedback loop between crowd TD and lighting from multiple days to a single publish-validate cycle. The 19-validator pre-publish check eliminated a recurring class of render failures that had previously only surfaced at render time. The asset manager's scene breakdown view made version audits — previously a manual Maya reference-editor trawl — instant.`,
       },
     ],
   },
