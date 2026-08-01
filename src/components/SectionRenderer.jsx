@@ -57,6 +57,34 @@ export default function SectionRenderer({ section }) {
         />
       );
 
+    case 'embed':
+      return (
+        <section className={styles.embedSection}>
+          {section.heading && <h2 className={styles.heading}>{section.heading}</h2>}
+          <div className={styles.embedFrame}>
+            <iframe
+              src={section.src}
+              title={section.caption || 'Embedded demo'}
+              allow="fullscreen"
+              loading="lazy"
+            />
+          </div>
+          {(section.caption || section.link) && (
+            <p className={styles.embedCaption}>
+              {section.caption}
+              {section.link && (
+                <>
+                  {' '}
+                  <a href={section.link} target="_blank" rel="noreferrer">
+                    {section.linkLabel || 'Open full screen ↗'}
+                  </a>
+                </>
+              )}
+            </p>
+          )}
+        </section>
+      );
+
     case 'stats':
       return (
         <section className={styles.statsSection}>

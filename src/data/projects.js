@@ -317,6 +317,75 @@ blended     = out_sum / weight_sum.clamp(min=1e-6)`,
       },
     ],
   },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'splat-stylizer',
+    title: 'Splat Stylizer',
+    shortDescription:
+      'A real-time stylization plugin for gaussian splats in Unity — watercolor strokes, comic dots, halftone printing, and color-group palettes applied live to photoreal 3D scans. Demoed in VR on Quest and as a playable web experience.',
+    thumbnail: null,
+    date: '2026-07',
+    role: 'Shader + plugin development, VR build, web port',
+    tools: ['Unity', 'HLSL', 'URP', 'C#', 'PlayCanvas', 'GLSL', 'WebGL'],
+    tags: ['Real-time', 'Shaders', 'Gaussian Splatting', 'VR', 'Web'],
+    featured: true,
+
+    sections: [
+      {
+        type: 'text',
+        heading: 'Overview',
+        body: `Gaussian splat scans look impressively real, and I wanted to see what happens when you push them the other way — toward paint. The core of this project is a Unity plugin that restyles splat scenes in real time: every splat can become a watercolor brush stroke or a comic halftone dot, colors get clustered into paint-palette groups with k-means, and a composite pass layers on Ben-Day printing, chromatic ghosting, and film-style grading. The whole look changes at runtime with a button press, which turns a photoreal scan into something that reads like a hand-painted set.`,
+      },
+      {
+        type: 'text',
+        heading: 'How the styling works',
+        body: `The styling happens in two places. Per-splat, the renderer's vertex and fragment shaders reshape each gaussian — stretching it along its dominant axis into a bristled stroke, or swapping its falloff for a signed-distance dot in one of several shapes — while a paint grade quantizes colors into discrete pigment levels with per-splat warm/cool variation. On top of that, a screen-space composite pass does the print-shop work: a tone-preserving halftone (ink coverage is solved so the dot pattern averages back to the original brightness), edge-masked RGB ghosting like misregistered print, and grading. Color groups tie it together: a k-means analysis clusters the scene's colors into a small palette, and every effect can snap toward those group colors, which is what makes the result feel deliberately painted instead of just filtered.`,
+      },
+      {
+        type: 'embed',
+        heading: 'Playable web demo',
+        src: 'https://stfnylim.github.io/sensai-web-demo/',
+        caption: 'Three scanned rooms with the full stylizer — try the NEON and NOIR presets, or mix your own look in the Customization panel.',
+        link: 'https://stfnylim.github.io/sensai-web-demo/',
+        linkLabel: 'Open full screen ↗',
+      },
+      {
+        type: 'text',
+        heading: 'The demos: VR and web',
+        body: `The plugin shipped inside ReVision, a weekend hackathon VR experience for Quest where you pick up style keys inside scanned rooms to repaint the world around you. Standalone VR forced the practical engineering: the k-means analysis needs a large GPU readback that mobile hardware hates, so the plugin bakes its color-group analysis in-editor and ships per-splat group IDs as data, making preset swaps instant on headset. The web version is a from-scratch port of the same looks to PlayCanvas — the composite effects translated shader-for-shader to GLSL, the per-splat passes rebuilt through splat-shader hooks, and the palettes baked offline into a few hundred bytes per room — running on plain WebGL2 so it works in any browser.`,
+      },
+      {
+        type: 'code',
+        language: 'glsl',
+        caption: 'Tone-preserving halftone — ink coverage solved so the print averages back to the original tone',
+        code: `vec3 stylizeHalftone(vec2 px, vec3 center) {
+  float cell = max(uHtScale, 2.0);
+  vec2 rp = rotate(px, uHtDir);                       // screen-space print grid
+  vec2 cCtr = (floor(rp / cell) + 0.5) * cell;
+  vec3 tone = sampleScene(unrotate(cCtr, uHtDir));    // one sample per cell
+
+  float Lt = luma(tone);
+  vec3 inks = snapToPalette(tone, uHtSnap);           // ink = nearest group color
+  float Li = luma(inks);
+  float Lp = luma(uHtPaper);
+  if (Li > Lt) { inks *= Lt / max(Li, 1e-4); Li = Lt; }   // can't print brighter than ink
+
+  // choose ink area so  a*ink + (1-a)*paper  averages back to the original tone
+  float a = clamp((Lp - Lt) / max(Lp - Li, 1e-4), 0.0, 1.0);
+  float radius = cell * sqrt(a / 3.14159265);         // area-correct dot size
+
+  float d = length(rp - cCtr);
+  float dotAA = 1.0 - smoothstep(radius - 1.0, radius + 1.0, d);
+  return mix(uHtPaper, inks, dotAA);
+}`,
+      },
+      {
+        type: 'text',
+        heading: 'Status',
+        body: `The plugin and both demos came together over a hackathon weekend and the week after. The web demo above is live; the Quest build runs standalone with baked style data. Next on the list is baking full styled splat variants offline so the heaviest looks render at the same cost as the unstyled scene.`,
+      },
+    ],
+  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
