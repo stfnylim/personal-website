@@ -1,4 +1,4 @@
-/**
+﻿/**
  * projects.js — single source of truth for all portfolio projects.
  *
  * To add a new project: add a new object to the `projects` array below.
@@ -19,7 +19,7 @@ export const projects = [
     id: 'crowd-publishing-pipeline',
     title: 'Crowd Publishing Pipeline',
     shortDescription:
-      'A Maya/Golaem publishing workflow I built to keep crowd agents, caches, and behaviors versioned together instead of passed around as loose files.',
+      'Golaem crowd publishing applications for Maya with full asset versioning across agents, caches, and behaviors — built for VFX production at MakeMake Entertainment.',
     thumbnail: null,
     date: '2024-03',
     role: 'Pipeline TD — tool development, validator integration, production deployment',
@@ -32,17 +32,17 @@ export const projects = [
       {
         type: 'text',
         heading: 'Overview',
-        body: `At MakeMake Entertainment, crowd shots had a lot of moving parts: agent definitions, simulation caches, behavior graphs, materials, and the files that tied them together. Different departments needed to iterate without accidentally breaking each other's work, so I built a set of Maya publishing tools to make those handoffs less fragile.`,
+        body: `At MakeMake Entertainment, crowd shots required coordinating multiple layers of Golaem data — agent definitions, simulation caches, behavior graphs, and material assignments — with no standardised versioning or validation between departments. I built a suite of publishing applications inside Maya that brought this process under production control.`,
       },
       {
         type: 'text',
         heading: 'Publishing Applications',
-        body: `I split the publisher by Golaem asset type: agents, caches, and behaviors each get their own version history. A central manifest records which versions belong to a shot, which made it much easier to roll back a bad agent update without touching an approved cache.`,
+        body: `Each publish application handles a specific Golaem asset type — agents, caches, and behaviors — with independent versioning so departments can iterate without stepping on each other. A central manifest tracks which version of each component is active per shot, making it straightforward to roll back a bad agent update without disturbing an approved cache.`,
       },
       {
         type: 'text',
         heading: 'Validation Layer',
-        body: `The validation layer was the part that saved the most headaches. Before a publish goes through, it checks for missing materials, unresolved shader references, absent textures, geometry cache issues, and behavior data that did not come along for the ride. When something fails, the artist sees it in Maya while the context is still fresh.`,
+        body: `Before any asset is committed, the pipeline runs a suite of validators covering missing materials, unresolved shader references, absent textures, and missing auxiliary files such as geometry caches and behavior data. Errors are surfaced with actionable messages directly in the Maya UI rather than discovered downstream in lighting or rendering.`,
       },
       {
         type: 'code',
@@ -89,97 +89,7 @@ def validate_agent_materials(agent_node: str) -> ValidationResult:
       {
         type: 'text',
         heading: 'Production Impact',
-        body: `In production, this shortened the loop between crowd and lighting from multi-day back-and-forth to a publish, validate, and fix cycle. It also caught missing files before render time, which removed one of those boring but expensive failure modes that can eat a team's afternoon.`,
-      },
-    ],
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  {
-    id: 'maya-mcp-assistant',
-    title: 'Maya MCP AI Assistant',
-    shortDescription:
-      'A Maya MCP prototype that lets an LLM inspect scenes and run small Maya actions from chat, with local models handling routine work and cloud calls saved for harder questions.',
-    thumbnail: null,
-    date: '2025-03',
-    role: 'Pipeline TD — MCP server, Maya integration, LLM architecture',
-    tools: ['Python', 'Maya', 'MCP', 'Claude API', 'Ollama', 'FastAPI'],
-    tags: ['AI', 'Maya', 'MCP', 'Automation', 'LLM'],
-    featured: true,
-
-    sections: [
-      {
-        type: 'text',
-        heading: 'Overview',
-        body: `This started from a familiar Maya problem: small tasks like renaming hierarchies, checking references, batch-exporting assets, or poking at scene issues are not hard, but they interrupt the flow of work. I built an MCP server that exposes selected Maya Python operations as structured tools an LLM can call, so those chores can be handled from a chat-style interface without leaving Maya.`,
-      },
-      {
-        type: 'text',
-        heading: 'How It Works',
-        body: `Maya stays in charge. The MCP server runs beside it and talks over a local socket, exposing a small set of tools for scene inspection, node edits, batch operations, and command execution. The LLM client turns a request into tool calls, reads the structured results, and either takes the next step or explains what it found.`,
-      },
-      {
-        type: 'code',
-        language: 'python',
-        caption: 'MCP tool definition — expose a Maya operation as an LLM-callable tool',
-        code: `from mcp.server import Server
-from mcp.types import Tool, TextContent
-import maya.cmds as cmds
-import json
-
-server = Server("maya-mcp")
-
-
-@server.list_tools()
-async def list_tools() -> list[Tool]:
-    return [
-        Tool(
-            name="list_scene_meshes",
-            description="Return all polygon mesh transforms in the current Maya scene.",
-            inputSchema={"type": "object", "properties": {}, "required": []},
-        ),
-        Tool(
-            name="rename_node",
-            description="Rename a Maya node.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "node": {"type": "string", "description": "Current node name"},
-                    "new_name": {"type": "string", "description": "Desired new name"},
-                },
-                "required": ["node", "new_name"],
-            },
-        ),
-    ]
-
-
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    if name == "list_scene_meshes":
-        meshes = cmds.ls(type="mesh", long=True) or []
-        transforms = [cmds.listRelatives(m, parent=True, fullPath=True)[0] for m in meshes]
-        return [TextContent(type="text", text=json.dumps(transforms))]
-
-    if name == "rename_node":
-        result = cmds.rename(arguments["node"], arguments["new_name"])
-        return [TextContent(type="text", text=result)]
-
-    raise ValueError(f"Unknown tool: {name}")
-`,
-      },
-      {
-        type: 'text',
-        heading: 'Hybrid LLM Architecture',
-        body: `I did not want every request to hit a cloud model just because the tool used AI. Routine operations like listing, querying, and simple renames can run through a local quantized model in Ollama. The cloud API is reserved for messier prompts, multi-step fixes, or error diagnosis. In testing, that routing cut inference spend by about 90% compared with sending everything to the cloud.`,
-      },
-      {
-        type: 'stats',
-        heading: 'Results',
-        rows: [
-          { metric: 'AI inference cost reduction', before: 'Baseline', after: '−90%' },
-          { metric: 'Architecture', before: 'Cloud-only', after: 'Local + cloud hybrid' },
-          { metric: 'Artist interface', before: 'Python script editor', after: 'Natural language' },
-        ],
+        body: `The toolset was deployed across active crowd-heavy productions at MakeMake, reducing the feedback loop between crowd TD and lighting from multiple days to a single publish-validate cycle. Validators catching missing files pre-publish eliminated a recurring class of lighting failures that had previously only surfaced at render time.`,
       },
     ],
   },
@@ -322,8 +232,8 @@ blended     = out_sum / weight_sum.clamp(min=1e-6)`,
     id: 'splat-stylizer',
     title: 'Splat Stylizer',
     shortDescription:
-      'A real-time stylization plugin for gaussian splats in Unity — watercolor strokes, comic dots, halftone printing, and color-group palettes applied live to photoreal 3D scans. Demoed in VR on Quest and as a playable web experience.',
-    thumbnail: null,
+      'A real-time stylization plugin for gaussian splats in Unity: watercolor strokes, comic dots, halftone printing, and color-group palettes applied live to photoreal 3D scans. Demoed in VR on Quest and as a playable web experience.',
+    thumbnail: '/images/revision_beforeafter_1.mp4',
     date: '2026-07',
     role: 'Shader + plugin development, VR build, web port',
     tools: ['Unity', 'HLSL', 'URP', 'C#', 'PlayCanvas', 'GLSL', 'WebGL'],
@@ -334,30 +244,30 @@ blended     = out_sum / weight_sum.clamp(min=1e-6)`,
       {
         type: 'text',
         heading: 'Overview',
-        body: `Gaussian splat scans look impressively real, and I wanted to see what happens when you push them the other way — toward paint. The core of this project is a Unity plugin that restyles splat scenes in real time: every splat can become a watercolor brush stroke or a comic halftone dot, colors get clustered into paint-palette groups with k-means, and a composite pass layers on Ben-Day printing, chromatic ghosting, and film-style grading. The whole look changes at runtime with a button press, which turns a photoreal scan into something that reads like a hand-painted set.`,
+        body: `Gaussian splat scans look impressively real, and I wanted to see what happens when you push them the other way, toward paint. The core of this project is a Unity plugin that restyles splat scenes in real time: every splat can become a watercolor brush stroke or a comic halftone dot, colors get clustered into paint-palette groups with k-means, and a composite pass layers on Ben-Day printing, chromatic ghosting, and film-style grading. The whole look changes at runtime with a button press, which turns a photoreal scan into something that reads like a hand-painted set.`,
       },
       {
         type: 'text',
         heading: 'How the styling works',
-        body: `The styling happens in two places. Per-splat, the renderer's vertex and fragment shaders reshape each gaussian — stretching it along its dominant axis into a bristled stroke, or swapping its falloff for a signed-distance dot in one of several shapes — while a paint grade quantizes colors into discrete pigment levels with per-splat warm/cool variation. On top of that, a screen-space composite pass does the print-shop work: a tone-preserving halftone (ink coverage is solved so the dot pattern averages back to the original brightness), edge-masked RGB ghosting like misregistered print, and grading. Color groups tie it together: a k-means analysis clusters the scene's colors into a small palette, and every effect can snap toward those group colors, which is what makes the result feel deliberately painted instead of just filtered.`,
+        body: `The styling happens in two places. Per-splat, the renderer's vertex and fragment shaders reshape each gaussian: it can stretch along its dominant axis into a bristled stroke, or swap its falloff for a signed-distance dot in one of several shapes, while a paint grade quantizes colors into discrete pigment levels with per-splat warm and cool variation. On top of that, a screen-space composite pass does the print-shop work: a tone-preserving halftone (ink coverage is solved so the dot pattern averages back to the original brightness), edge-masked RGB ghosting like misregistered print, and grading. Color groups tie it together. A k-means analysis clusters the scene's colors into a small palette, and every effect can snap toward those group colors, which is what makes the result feel deliberately painted instead of just filtered.`,
       },
       {
         type: 'embed',
         heading: 'Playable web demo',
         src: 'https://stfnylim.github.io/sensai-web-demo/',
-        caption: 'Three scanned rooms with the full stylizer — try the NEON and NOIR presets, or mix your own look in the Customization panel.',
+        caption: 'Three splat rooms with the full stylizer: one is a real LiDAR scan, the other two are AI-generated worlds. Try the NEON and NOIR presets, or mix your own look in the Customization panel.',
         link: 'https://stfnylim.github.io/sensai-web-demo/',
         linkLabel: 'Open full screen ↗',
       },
       {
         type: 'text',
         heading: 'The demos: VR and web',
-        body: `The plugin shipped inside ReVision, a weekend hackathon VR experience for Quest where you pick up style keys inside scanned rooms to repaint the world around you. Standalone VR forced the practical engineering: the k-means analysis needs a large GPU readback that mobile hardware hates, so the plugin bakes its color-group analysis in-editor and ships per-splat group IDs as data, making preset swaps instant on headset. The web version is a from-scratch port of the same looks to PlayCanvas — the composite effects translated shader-for-shader to GLSL, the per-splat passes rebuilt through splat-shader hooks, and the palettes baked offline into a few hundred bytes per room — running on plain WebGL2 so it works in any browser.`,
+        body: `The plugin shipped inside ReVision, a weekend hackathon VR experience for Quest where you pick up style keys inside splat rooms to repaint the world around you. Standalone VR forced the practical engineering: the k-means analysis needs a large GPU readback that mobile hardware hates, so the plugin bakes its color-group analysis in-editor and ships per-splat group IDs as data, making preset swaps instant on headset. The web version is a from-scratch port of the same looks to PlayCanvas. The composite effects translated shader-for-shader to GLSL, the per-splat passes were rebuilt through splat-shader hooks, and the palettes were baked offline into a few hundred bytes per room, all running on plain WebGL2 so it works in any browser.`,
       },
       {
         type: 'code',
         language: 'glsl',
-        caption: 'Tone-preserving halftone — ink coverage solved so the print averages back to the original tone',
+        caption: 'Tone-preserving halftone: ink coverage solved so the print averages back to the original tone',
         code: `vec3 stylizeHalftone(vec2 px, vec3 center) {
   float cell = max(uHtScale, 2.0);
   vec2 rp = rotate(px, uHtDir);                       // screen-space print grid

@@ -1,9 +1,20 @@
 import { Link } from 'react-router-dom';
 import ProjectCard from '../components/ProjectCard';
+import ThumbnailMedia from '../components/ThumbnailMedia';
 import { getFeaturedProjects } from '../data/projects';
+import { getAllPosts } from '../data/posts';
 import styles from './Home.module.css';
 
 const featured = getFeaturedProjects();
+const recentPosts = getAllPosts().slice(0, 3);
+
+function formatDate(iso) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 const socialLinks = [
   { href: 'https://www.linkedin.com/in/stfnylim/',        label: 'LinkedIn' },
@@ -29,8 +40,8 @@ export default function Home() {
             <p className={styles.eyebrow}>Pipeline Technical Director</p>
             <h1 className={styles.name}>Stephanie Lim</h1>
             <p className={styles.tagline}>
-              Pipeline TD building tools, automation, and AI-assisted workflows for VFX production —
-              from crowd publishing pipelines to Maya MCP integrations.
+              Pipeline TD making the repetitive parts of production less painful:
+              Maya and Golaem tools, publishing workflows, validation, and practical AI experiments.
             </p>
 
             <nav className={styles.socialLinks} aria-label="Social links">
@@ -61,6 +72,50 @@ export default function Home() {
           {featured.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
+        </div>
+      </section>
+
+      {/* ── Blog peek ── */}
+      {recentPosts.length > 0 && (
+        <section className={styles.blogPeek}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>From the Blog</h2>
+            <Link to="/blog" className={styles.viewAll}>All posts →</Link>
+          </div>
+
+          <div className={styles.postRow}>
+            {recentPosts.map((post) => (
+              <Link key={post.id} to={`/blog/${post.id}`} className={styles.postCard}>
+                {post.thumbnail && (
+                  <ThumbnailMedia src={post.thumbnail} className={styles.postCardThumb} />
+                )}
+                <div className={styles.postCardBody}>
+                  <time className={styles.postCardDate} dateTime={post.date}>
+                    {formatDate(post.date)}
+                  </time>
+                  <h3 className={styles.postCardTitle}>{post.title}</h3>
+                  <p className={styles.postCardSummary}>{post.summary}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── About teaser ── */}
+      <section className={styles.aboutStrip}>
+        <div className={styles.aboutStripInner}>
+          <p className={styles.aboutStripText}>
+            Pipeline TD who likes turning messy production handoffs into tools people can
+            actually rely on. Previously at MakeMake Entertainment, currently open to
+            Pipeline TD and Lead roles.
+          </p>
+          <div className={styles.aboutStripLinks}>
+            <Link to="/about" className={styles.socialLink}>More about me →</Link>
+            <a href="/Stephanie_Lim_Pipeline_TD_Disney.pdf" className={styles.socialLink}>
+              Resume ↓
+            </a>
+          </div>
         </div>
       </section>
 
