@@ -10,7 +10,8 @@ export default function Projects() {
       <header className={styles.header}>
         <h1 className={styles.title}>Projects</h1>
         <p className={styles.subtitle}>
-          Pipeline tools, automation systems, and USD workflows built for VFX production.
+          A few tools and experiments from working around Maya, Golaem, production handoffs,
+          and the small failure modes that slow artists down.
         </p>
       </header>
 

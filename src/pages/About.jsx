@@ -29,18 +29,18 @@ export default function About() {
         <section className={styles.bio}>
           <h2 className={styles.sectionHeading}>Background</h2>
           <p>
-            I'm a Pipeline Technical Director building production tools and automation for VFX studios.
-            My focus is the intersection of software engineering and artist workflow — writing systems
-            that are reliable enough to trust in production and ergonomic enough that artists actually use them.
+            I'm a Pipeline Technical Director who likes turning messy production handoffs into tools
+            people can actually rely on. Most of my work sits around Maya, asset publishing, validation,
+            and the little workflow problems that cost artists time every day.
           </p>
           <p>
-            Recent work includes crowd publishing pipelines for Golaem in Maya, an MCP-based AI
-            assistant that connects LLMs directly to Maya, and ongoing ML research into texture
-            classification as part of Stanford's XCS229 program.
+            Lately that has meant building Golaem crowd publishing tools, experimenting with an MCP
+            assistant for Maya, and working on a PBR texture generation pipeline with a Maya plugin
+            for turning diffuse textures into usable material maps.
           </p>
           <p>
-            Previously at <strong>MakeMake Entertainment</strong>.
-            Open to Pipeline TD and Lead roles.
+            Previously at <strong>MakeMake Entertainment</strong>. I am currently open to Pipeline TD
+            and Lead roles where I can stay close to both the artists and the engineering problems.
           </p>
 
           <div className={styles.ctaLinks}>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import ThumbnailMedia from './ThumbnailMedia';
 import styles from './ProjectCard.module.css';
 
 export default function ProjectCard({ project }) {
@@ -8,7 +9,7 @@ export default function ProjectCard({ project }) {
     <Link to={`/projects/${id}`} className={styles.card}>
       <div className={styles.thumbnail}>
         {thumbnail ? (
-          <img src={thumbnail} alt={`${title} thumbnail`} loading="lazy" />
+          <ThumbnailMedia src={thumbnail} alt={`${title} thumbnail`} />
         ) : (
           <div className={styles.placeholder} aria-hidden="true">
             <span className={styles.placeholderIcon}>⬡</span>
